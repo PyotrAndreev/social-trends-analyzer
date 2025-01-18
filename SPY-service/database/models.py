@@ -1,45 +1,51 @@
-from sqlalchemy import Column, ForeignKey, String, BigInteger, DateTime
+from sqlalchemy import Column, ForeignKey, String, BigInteger, DateTime, JSON
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from database.database import Base
+import uuid
 
 
 class Channel(Base):
     __tablename__ = "channels"
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False, unique=True)
-    videos = relationship("Video", back_populates="channel")
+    last_update = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    videos = relationship("Video", back_populates="channel", lazy="joined")
 
 
 class Brand(Base):
     __tablename__ = "brands"
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False, unique=True)
-    products = relationship("Product", back_populates="brand")
+    name = Column(String, primary_key=True, nullable=False, unique=True)
+    last_update = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    products = relationship("Product", back_populates="brand", lazy="joined")
 
 
 class Product(Base):
     __tablename__ = "products"
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False)
-    brand_id = Column(BigInteger, ForeignKey("brands.id"), nullable=False)
-    brand = relationship("Brand", back_populates="products")
-    advertisements = relationship("Advertisement", back_populates="product")
+    name = Column(String, primary_key=True, nullable=False)
+    brand_name = Column(String, ForeignKey("brands.name"), nullable=False)
+    last_update = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    brand = relationship("Brand", back_populates="products", lazy="joined")
+    advertisements = relationship("Advertisement", back_populates="product", lazy="joined")
 
 
 class Video(Base):
     __tablename__ = "videos"
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String, nullable=False)
     published_at = Column(DateTime, nullable=False)
-    channel_id = Column(BigInteger, ForeignKey("channels.id"), nullable=False)
-    channel = relationship("Channel", back_populates="videos")
-    advertisements = relationship("Advertisement", back_populates="video")
+    channel_id = Column(String, ForeignKey("channels.id"), nullable=False)
+    last_update = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    channel = relationship("Channel", back_populates="videos", lazy="joined")
+    advertisements = relationship("Advertisement", back_populates="video", lazy="joined")
 
 
 class Advertisement(Base):
     __tablename__ = "advertisements"
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    video_id = Column(BigInteger, ForeignKey("videos.id"), nullable=False)
-    product_id = Column(BigInteger, ForeignKey("products.id"), nullable=False)
-    video = relationship("Video", back_populates="advertisements")
-    product = relationship("Product", back_populates="advertisements")
+    video_id = Column(String, ForeignKey('videos.id'), nullable=False)
+    product_name = Column(String, ForeignKey('products.name'), nullable=False)
+    link = Column(String, primary_key=True, nullable=False)
+    utm_tags = Column(JSON, nullable=True)
+    last_update = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    video = relationship('Video', back_populates='advertisements', lazy="joined")
+    product = relationship('Product', back_populates='advertisements', lazy="joined")

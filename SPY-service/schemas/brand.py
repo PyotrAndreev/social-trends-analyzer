@@ -1,19 +1,27 @@
 from pydantic import BaseModel
 from typing import List
 from schemas.product import Product
+from datetime import datetime
 
 
 class BrandBase(BaseModel):
     name: str
+    last_update: datetime
+    products: List["Product"] = []
 
 
 class BrandCreate(BrandBase):
     pass
 
 
+class BrandUpdate(BrandBase):
+    pass
+
+
 class Brand(BrandBase):
-    id: int
-    products: List[Product] = []
+    name: int
+    last_update: datetime
+    products: List["Product"] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
