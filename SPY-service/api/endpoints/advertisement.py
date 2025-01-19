@@ -10,9 +10,9 @@ def create_advertisement_endpoint(advertisement: AdvertisementCreate):
         return db_api.create_advertisement(advertisement)
 
 @router.get("/{advertisement_id}", response_model=Advertisement)
-def get_advertisement_endpoint(link: str):
+def get_advertisement_endpoint(expanded_link: str):
     with DBAPI() as db_api:
-        db_advertisement = db_api.get_advertisement(link)
+        db_advertisement = db_api.get_advertisement(expanded_link)
         if not db_advertisement:
             raise HTTPException(status_code=404, detail="Advertisement not found")
         return db_advertisement

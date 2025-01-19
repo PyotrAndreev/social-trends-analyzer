@@ -6,6 +6,7 @@ from crud import (
     product as crud_product,
     video as crud_video,
 )
+from database.models import Advertisement
 from schemas.advertisement import AdvertisementCreate
 from schemas.brand import BrandCreate
 from schemas.channel import ChannelCreate
@@ -27,10 +28,10 @@ class DBAPI:
     def create_advertisement(self, advertisement: AdvertisementCreate):
         return crud_advertisement.create_advertisement(self.db, advertisement)
 
-    def get_advertisement(self, link: str):
-        return crud_advertisement.get_advertisement(self.db, link)
+    def get_advertisement(self, expanded_link: str):
+        return crud_advertisement.get_advertisement(self.db, expanded_link)
 
-    def get_advertisements(self, skip: int = 0, limit: int = 100):
+    def get_advertisements(self, skip: int = 0, limit: int = 10000):
         return crud_advertisement.get_advertisements(self.db, skip, limit)
 
     def create_brand(self, brand: BrandCreate):
@@ -68,3 +69,6 @@ class DBAPI:
 
     def get_videos(self, skip: int = 0, limit: int = 100):
         return crud_video.get_videos(self.db, skip, limit)
+
+    def count_advertisements(self):
+        return self.db.query(Advertisement).count()

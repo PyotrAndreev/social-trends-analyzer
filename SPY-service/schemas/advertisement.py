@@ -6,7 +6,8 @@ from datetime import datetime
 class AdvertisementBase(BaseModel):
     video_id: str
     product_name: str
-    link: str
+    expanded_link: str
+    short_link: str
     utm_tags: Optional[dict]
     last_update: datetime
 
@@ -22,7 +23,8 @@ class AdvertisementUpdate(AdvertisementBase):
 class Advertisement(AdvertisementBase):
     video_id: str
     product_name: str
-    link: str
+    expanded_link: str
+    short_link: str
     utm_tags: Optional[dict]
     last_update: datetime
 

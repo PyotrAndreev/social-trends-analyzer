@@ -11,8 +11,8 @@ def create_advertisement(db: Session, advertisement: AdvertisementCreate):
     return db_advertisement
 
 
-def get_advertisement(db: Session, link: str):
-    return db.query(Advertisement).filter(Advertisement.link == link).first()
+def get_advertisement(db: Session, expanded_link: str):
+    return db.query(Advertisement).filter(Advertisement.expanded_link == expanded_link).first()
 
 
 def get_advertisements(db: Session, skip: int = 0, limit: int = 100):

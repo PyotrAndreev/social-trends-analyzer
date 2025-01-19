@@ -1,9 +1,12 @@
 import re
+
+import chardet
 import requests
 from urllib.parse import urlparse, parse_qs
-from googleapiclient.discovery import build
+
 from bs4 import BeautifulSoup
-import chardet
+from googleapiclient.discovery import build
+from playwright.sync_api import sync_playwright
 from fastapi import HTTPException
 from datetime import datetime
 from core.config import Settings
@@ -14,7 +17,7 @@ from schemas.channel import ChannelCreate
 from schemas.product import ProductCreate
 from schemas.video import VideoCreate
 
-API_KEY = Settings.YOUTUBE_API_KEY
+API_KEY = 'AIzaSyBcoVP46wSMBhqE56irLl2ejLclAG1d9QY'
 
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
@@ -44,23 +47,13 @@ class YouTubeParser:
             parsed_url = urlparse(expanded_url)
             domain = parsed_url.netloc
 
-            response = requests.get(expanded_url, timeout=10)
-            if response.status_code == 200:
-                detected_encoding = response.encoding if response.encoding else chardet.detect(response.content)[
-                    'encoding']
-                response.encoding = detected_encoding
-
-                html_content = response.text
-                soup = BeautifulSoup(html_content, 'html.parser')
-
-                title = soup.title.string if soup.title else "Неизвестно"
-                meta_description = next(
-                    (meta['content'] for meta in soup.find_all('meta') if meta.get('name') == 'description'), None)
-
-                product = meta_description or title
-                return domain, product
-            else:
-                return domain, "Неизвестно"
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.goto(url, timeout=50000)
+                title = page.evaluate("document.title")
+                browser.close()
+            return domain, title
         except Exception as e:
             print(f"Ошибка при извлечении данных из URL {url}: {e}")
             return "Неизвестно", "Неизвестно"
@@ -224,6 +217,8 @@ class YouTubeParser:
                         last_update=datetime.now()
                     )
                     db_channel = db_api.create_channel(channel)
+                else:
+                    db_channel.last_update = datetime.now()
 
                 video_ids = YouTubeParser.extract_video_ids_from_channel(channel_url)
                 for video_id in video_ids:
@@ -243,22 +238,26 @@ class YouTubeParser:
                         ignore = ['instagram', 'youtube', 'telegram', 'twitch', 'tiktok', 't.me']
                         for link in all_links:
                             expanded_url = YouTubeParser.expand_short_url(link)
-                            if any(i in expanded_url for i in ignore):
+                            if ('instagram' in expanded_url) or ('youtube' in expanded_url) or (
+                                    'telegram' in expanded_url) or ('twitch' in expanded_url) or (
+                                    'tiktok' in expanded_url) or ('t.me' in expanded_url):
                                 continue
                             utm_data = YouTubeParser.extract_utm_parameters(expanded_url)
                             brand_name, product_name = YouTubeParser.extract_company_from_url(expanded_url)
 
                             db_brand = db_api.get_brand(brand_name)
 
-                            if not db_brand:
+                            if not db_brand and not (brand_name == 'Неизвестно'):
                                 brand = BrandCreate(
                                     name=brand_name,
                                     last_update=datetime.now()
                                 )
                                 db_brand = db_api.create_brand(brand)
+                            elif db_brand:
+                                db_brand.last_update = datetime.now()
 
                             db_product = db_api.get_product(product_name)
-                            if not db_product:
+                            if not db_product and brand_name != 'Неизвестно' and product_name != 'Неизвестно':
                                 product = ProductCreate(
                                     name=product_name,
                                     brand_name=db_brand.name,
@@ -266,16 +265,19 @@ class YouTubeParser:
                                 )
                                 db_product = db_api.create_product(product)
 
-                            db_advertisement = db_api.get_advertisement(expanded_url)
-                            if not db_advertisement:
-                                advertisement = AdvertisementCreate(
-                                    video_id=db_video.id,
-                                    product_name=db_product.name,
-                                    link=expanded_url,
-                                    utm_tags=utm_data,
-                                    last_update=datetime.now()
-                                )
-                                db_advertisement = db_api.create_advertisement(advertisement)
+                                db_advertisement = db_api.get_advertisement(expanded_url)
+                                if not db_advertisement:
+                                    advertisement = AdvertisementCreate(
+                                        video_id=db_video.id,
+                                        product_name=db_product.name,
+                                        expanded_link=expanded_url,
+                                        short_link=link,
+                                        utm_tags=utm_data,
+                                        last_update=datetime.now()
+                                    )
+                                    db_advertisement = db_api.create_advertisement(advertisement)
+                                elif db_product:
+                                    db_product.last_update = datetime.now()
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
