@@ -9,6 +9,7 @@ from source.handlers import messages
 from source.handlers import states
 
 from source.utils import registration
+from database.db_init import init_db
 
 bot = Bot(token=settings.bot_token.get_secret_value(), default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
@@ -23,6 +24,8 @@ def include_all_routers(dp):
 
 
 async def main():
+    init_db()
+
     try:
         if await bot.get_webhook_info():
             await bot.delete_webhook(drop_pending_updates=True)

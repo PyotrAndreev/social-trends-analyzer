@@ -1,6 +1,10 @@
+import os
 import re
 import json
 import logging
+
+from dotenv import load_dotenv
+
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
@@ -10,33 +14,39 @@ from bot.source.utils.states import UserState, RegState
 
 from bot.source.utils.templates import BUTTONS, MESSAGES
 
+from sqlalchemy.orm import Session
+from database.models import User
+from database.db_init import get_db
+
+load_dotenv()
+
 router = Router()
 
 # Логирование ошибок
 logger = logging.getLogger(__name__)
 
 # Путь к файлам
-USER_DATA_PATH = ""
+USER_DATA_PATH = os.getenv('USER_DATA_PATH')
 
 
-# Сохранение данных пользователя в JSON
-def save_user_to_json(user_data):
+# Сохранение данных пользователя в базу данных
+def save_user_to_db(user_data, db: Session):
     try:
-        with open(USER_DATA_PATH, "r", encoding="utf-8") as file:
-            existing_data = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        logger.error(f"Error reading JSON file: {e}")
-        existing_data = []
-
-    existing_data.append(user_data)
-
-    try:
-        with open(USER_DATA_PATH, "w", encoding="utf-8") as file:
-            json.dump(existing_data, file, ensure_ascii=False, indent=4)
+        user = User(
+            id=user_data["id"],
+            name=user_data["name"],
+            age=user_data["age"],
+            email=user_data["email"],
+            phone=user_data["phone"]
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return True
     except Exception as e:
-        logger.error(f"Error writing to JSON file: {e}")
+        logger.error(f"Error saving user to database: {e}")
+        db.rollback()
         return False
-    return True
 
 
 # Проверка валидности данных
@@ -129,8 +139,10 @@ async def confirm_data(message: Message, state: FSMContext):
 
     if user_response == BUTTONS["confirm"]:
         user_data["id"] = message.from_user.id
-        user_data["username"] = message.from_user.username
-        if save_user_to_json(user_data):
+
+        db: Session = next(get_db())
+
+        if save_user_to_db(user_data, db):
             await message.answer(MESSAGES["registration_complete"], reply_markup=rkb.menu_button)
             await state.clear()
             await state.set_state(UserState.main_menu)

@@ -8,7 +8,6 @@ import bot.source.keyboards.inline as ikb
 from bot.source.utils.states import UserState
 from bot.source.utils.templates import BUTTONS, MESSAGES
 
-
 router = Router()
 
 
