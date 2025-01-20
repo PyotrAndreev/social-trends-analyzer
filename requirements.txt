@@ -3,3 +3,7 @@ python-dotenv~=1.0.1
 SQLAlchemy~=2.0.37
 pydantic-settings~=2.7.1
 pydantic~=2.9.2
+fastapi
+uvicorn
+sqlalchemy
+psycopg2
