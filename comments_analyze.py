@@ -12,13 +12,14 @@ matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 from wordcloud import WordCloud
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-YOUTUBE_API_KEY = "AIzaSyAjsyZtdDt9-yP3x2W5tHiQqEqet1ip3Y4"
-OPENAI_API_KEY = "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"
-VIDEO_ID = "b--nRgmCvrY"
+YOUTUBE_API_KEY = os.environ['YOUTUBE_API_KEY']
+OPENAI_API_KEY = os.environ['OPENAI_API_KEY']
+VIDEO_ID = ''
 SEMAPHORE_LIMIT = 10
 MAX_RETRIES = 3
 
